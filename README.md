@@ -117,16 +117,16 @@ as `mcp_boaky_search_books` etc.
 
 ## Hermes + OpenCode Go (DeepSeek) setup
 
-The `.env` file under `.hermes/` holds the OpenCode Go key (`OPENCODE_GO_API_KEY`)
-already. `.hermes/config.yaml` (mounted at `/opt/data/config.yaml` in the
-container) points Hermes at Boaky and at the DeepSeek model through the
-OpenAI-compatible OpenCode Go endpoint:
+The `.env` file under `hermes/` holds the OpenCode Go key
+(`OPENCODE_GO_API_KEY`). `hermes/config.yaml` (copied into the container's
+`HERMES_HOME=/opt/data` at boot) points Hermes at Boaky and at the DeepSeek
+model through the OpenAI-compatible OpenCode Go endpoint:
 
 ```yaml
-# .hermes/config.yaml
+# hermes/config.yaml
 model:
-  provider: opencode-go
-  default: deepseek-v4-pro        # OpenCode Go's OpenAI-compatible endpoint
+  provider: custom:opencode-go
+  default: deepseek-v4.1-flash     # must be an exact OpenCode Go model id
 providers:
   opencode-go:
     base_url: "https://opencode.ai/zen/go/v1"
@@ -135,6 +135,33 @@ mcp_servers:
   boaky:
     url: http://boaky:8000/mcp
 ```
+
+`default:` takes a **model id**, not a display name. Get the authoritative list
+from the endpoint itself — ids such as `deepseek-v4.1-flash` and
+`deepseek-v4-pro` are valid, while `DeepSeek-Flash-V4.1` or any `*-free` variant
+is rejected with `Model is unavailable`:
+
+```bash
+curl -s https://opencode.ai/zen/go/v1/models \
+  -H "Authorization: Bearer $OPENCODE_GO_API_KEY" | jq -r '.data[].id'
+```
+
+Also make sure `OPENCODE_GO_API_KEY` is a **Go** key (it authenticates against
+`/zen/go/v1`). A Zen or other key fails with `HTTP 401: Upstream request failed:
+Invalid credential`.
+
+Config and secrets are staged through a directory mount
+(`./hermes:/opt/hermes-config:ro`) and copied into the container by
+`hermes/entrypoint.sh` on every boot. Because Hermes loads them at startup, edits
+to `hermes/config.yaml` or `hermes/.env` require a restart to take effect:
+
+```bash
+docker compose up -d --force-recreate hermes
+```
+
+`hermes/config.yaml` in the repo is the source of truth: a `hermes config set`
+run inside the container writes to the container's copy under `/opt/data` and is
+overwritten on the next boot, so edit the repo file and recreate instead.
 
 Keep the book-research profile limited to Boaky tools (no web search when
 answering book questions).

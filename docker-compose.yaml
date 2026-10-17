@@ -44,13 +44,21 @@ services:
     #   docker compose run --rm hermes hermes -z "question"
     tty: true
     stdin_open: true
+    # entrypoint.sh copies the staged config/secrets into HERMES_HOME on boot
+    # and then execs the stock image dispatcher. "$@" (the container CMD) is
+    # forwarded untouched, so `docker compose run --rm hermes hermes -z "..."`
+    # still works.
+    entrypoint: ["/opt/hermes-config/entrypoint.sh"]
     volumes:
-      # Declarative config (tracked) + secrets (ignored) as single-file binds;
-      # Hermes' runtime state (sessions, caches, state.db) lives in a volume
-      # so the repo stays clean.
-      - hermes-home:/opt/data
-      - ./hermes/config.yaml:/opt/data/config.yaml:ro
-      - ./hermes/.env:/opt/data/.env:ro
+      # Hermes' runtime state (sessions, caches, state.db) lives in a volume so
+      # the repo stays clean.
+      - hermes-home:/opt/data:rw
+      # Staged config + secrets, mounted as a DIRECTORY rather than one bind
+      # per file. Single-file binds are resolved once at container start, so an
+      # atomic-write editor (temp + rename) silently leaves the container
+      # serving the OLD key/config until it is recreated. See entrypoint.sh.
+      # Read-only: ./hermes/config.yaml in the repo is the source of truth.
+      - ./hermes:/opt/hermes-config:ro
     depends_on:
       boaky:
         condition: service_healthy

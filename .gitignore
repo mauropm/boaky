@@ -8,6 +8,11 @@ coverage.out
 .env
 *.env
 !/.env.example
+# Editor backup/swap files shadow the rules above (e.g. `.env~` does not match
+# `*.env`), so a transient editor artifact could commit a live key.
+*~
+*.swp
+*.swo
 
 # SQLite database (contains indexed private book text — keep out of git).
 # Only .gitkeep anchors are tracked so the directory structure exists.
