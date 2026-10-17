@@ -336,3 +336,19 @@ texts contradict.
 ```bash
 make check    # gofmt + vet + tests + race
 ```
+
+## License
+
+- **Boaky** — this repository's code (indexer, search, evidence gate, MCP
+  server, CLI, Dockerfiles) is licensed under the **MIT License** (see
+  [`LICENSE`](LICENSE)).
+- **Hermes** — not part of this repository and not my code. The conversational
+  layer is pulled as the separate image `nousresearch/hermes-agent`, an
+  independent product by Nous Research; this project owns none of it and its
+  configuration here only mounts it. Before relying on it beyond personal use,
+  **check the license of the Hermes build you actually run** (upstream
+  repository / your image's `/opt/hermes/LICENSE`). As of this writing the
+  bundled image carries an MIT notice (© 2025 Nous Research), but treat that
+  as an observation to verify, not a guarantee — it is not covered by Boaky's
+  MIT license.
+
