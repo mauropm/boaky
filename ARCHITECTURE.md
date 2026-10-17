@@ -138,7 +138,8 @@ data/index, data/metadata ◀──bind──│  read_only, cap_drop ALL,      
                                   └────────────┬───────────────────────┘
                                 boaky-internal (internal network)
                                   ┌────────────┴───────────────────────┐
-                                  │ hermes (config + .env from .hermes) │
+                                  │ hermes (config + .env staged from   │
+                                  │ ./hermes/, state in hermes-home vol) │
                                   └────────────┬───────────────────────┘
                                         outbound (bridge) ──▶ OpenCode Go
 ```

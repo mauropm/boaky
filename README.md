@@ -57,6 +57,43 @@ hidden files ignored). Boaky never modifies, renames, or deletes source files.
 Indexing skips files whose SHA-256 is unchanged, so re-runs are near-free.
 Interrupted runs leave no partial records (per-book transactions).
 
+## The bundled collection (Project Gutenberg) — yours to replace
+
+The `books/` folder ships with **45 public-domain titles from Project
+Gutenberg** (novels, stories, and essays), just to give the engine real
+material out of the box: search quality, the evidence gate, and citations
+are all easier to judge against genuine prose. These books are local
+only — `books/` is gitignored, so anyone who clones this repo starts with
+an empty collection.
+
+Treat the bundled books as disposable and the collection as your own:
+
+- **Remove the Gutenberg books** any time you're done experimenting.
+  Deleting them is a host-side decision — Boaky never deletes your files,
+  so just delete the `.txt` files yourself and then run:
+
+  ```bash
+  docker compose run --rm boaky index --reconcile   # drop vanished books
+  ```
+
+  Without `--reconcile`, vanished files are only marked `missing` (excluded
+  from search, record kept); the flag removes them from the index entirely.
+
+- **Add your own books**: UTF-8 plain-text `.txt` (or drop converted
+  `.md`/OCR'd text) — nested subdirectories are fine, files up to
+  `BOAKY_MAX_FILE_BYTES` (default 50 MiB). After adding, reindex:
+
+  ```bash
+  docker compose run --rm boaky index
+  ```
+
+- PDF/EPUB/scanned books need a plain-text conversion first (Boaky reads
+  text only — no OCR, no binaries). If your own titles are not in UTF-8,
+  convert them (`iconv -f latin1 -t utf-8 in.txt > out.txt`).
+- If you delete or replace books often, remember `index --reconcile` is
+  the command that cleans vanished books out; a plain `index` leaves them
+  behind as `missing`.
+
 ## Searching
 
 ```bash
@@ -92,7 +129,8 @@ shell, or SQL access.
 **Stdio** (single machine, Hermes runs locally):
 
 ```yaml
-# ~/.hermes/config.yaml
+# your local Hermes config (conventionally ~/.hermes/config.yaml — this is
+# the path for a host-run Hermes, not the containerized setup below)
 mcp_servers:
   boaky:
     command: "/path/to/boaky/bin/boaky"
@@ -105,22 +143,41 @@ mcp_servers:
 **Streamable HTTP** (containerized — what `docker compose up` uses):
 
 ```yaml
-# .hermes/config.yaml
+# hermes/config.yaml (this repo, staged into the container at boot)
 mcp_servers:
   boaky:
     url: "http://boaky:8000/mcp"   # internal Docker network
-    timeout: 30
+    timeout: 60
 ```
 
 Then verify from inside Hermes: ask it to `list_books`. Registered tools appear
 as `mcp_boaky_search_books` etc.
 
-## Hermes + OpenCode Go (DeepSeek) setup
+## Hermes + OpenCode Go (DeepSeek V4.1 Flash) setup
 
-The `.env` file under `hermes/` holds the OpenCode Go key
-(`OPENCODE_GO_API_KEY`). `hermes/config.yaml` (copied into the container's
-`HERMES_HOME=/opt/data` at boot) points Hermes at Boaky and at the DeepSeek
-model through the OpenAI-compatible OpenCode Go endpoint:
+This deployment generates answers with **DeepSeek V4.1 Flash** through the
+OpenCode Go API. Boaky itself never talks to any provider — only Hermes
+holds the key.
+
+### Where the API key goes
+
+Put your OpenCode Go key in **`hermes/.env`**, next to `hermes/config.yaml`:
+
+```bash
+# hermes/.env  — create it if it doesn't exist
+OPENCODE_GO_API_KEY=sk-...
+```
+
+`hermes/.env` is gitignored (the `*.env` rule) and is **never committed** —
+the repo only ever references `${OPENCODE_GO_API_KEY}` as a placeholder.
+If you clone this project, the file won't exist: create it with your key,
+then run `docker compose up -d --force-recreate hermes` so it's picked up.
+Make sure it is a **Go** key (it authenticates against `/zen/go/v1`); a Zen
+or other key fails with `HTTP 401: Upstream request failed: Invalid
+credential`.
+
+`hermes/config.yaml` (copied into the container's `HERMES_HOME=/opt/data`
+at boot) wires Hermes to that key, to the DeepSeek model, and to Boaky:
 
 ```yaml
 # hermes/config.yaml
@@ -145,10 +202,6 @@ is rejected with `Model is unavailable`:
 curl -s https://opencode.ai/zen/go/v1/models \
   -H "Authorization: Bearer $OPENCODE_GO_API_KEY" | jq -r '.data[].id'
 ```
-
-Also make sure `OPENCODE_GO_API_KEY` is a **Go** key (it authenticates against
-`/zen/go/v1`). A Zen or other key fails with `HTTP 401: Upstream request failed:
-Invalid credential`.
 
 Config and secrets are staged through a directory mount
 (`./hermes:/opt/hermes-config:ro`) and copied into the container by
