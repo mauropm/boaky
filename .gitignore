@@ -1,0 +1,41 @@
+# Go build artifacts
+/bin/
+/dist/
+*.test
+coverage.out
+
+# Secrets — never commit real credentials
+.env
+*.env
+!/.env.example
+
+# SQLite database (contains indexed private book text — keep out of git).
+# Only .gitkeep anchors are tracked so the directory structure exists.
+data/*
+!data/index/
+data/index/*
+!data/index/.gitkeep
+!data/metadata/
+data/metadata/*
+!data/metadata/.gitkeep
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+
+# Private book sources — the library is personal data, not project code.
+# (Synthetic fixtures used by tests live under tests/fixtures/ and ARE committed.)
+books/*
+!books/.gitkeep
+
+# Logs and scratch
+*.log
+/index/
+books-rag/
+
+# Hermes' own runtime state directory (created by the container's first
+# boot with the old mount scheme; it now lives in the hermes-home volume).
+/.hermes/
+
+# OS noise
+.DS_Store

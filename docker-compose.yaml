@@ -1,0 +1,71 @@
+# Boaky — local-first book evidence engine, with Hermes as the conversational layer.
+#
+# Persistence model:
+#   ./books          read-only source TXT files (never modified by Boaky)
+#   ./data/index     SQLite database (WAL) — survives rebuild/recreation
+#   ./data/metadata  per-book JSON metadata
+#
+# Start:      docker compose up -d --build
+# Index:      docker compose run --rm boaky index
+# Recreate:   docker compose up -d --force-recreate   (NEVER use `down -v`)
+services:
+  boaky:
+    build: .
+    image: boaky:local
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - ./books:/books:ro
+      - ./data/index:/data/index
+      - ./data/metadata:/data/metadata
+    environment:
+      BOAKY_HTTP_ADDR: "0.0.0.0:8000"
+      BOAKY_LOG_LEVEL: "info"
+      # No API keys: boaky never calls out to any provider. Generation
+      # configuration lives on the Hermes side.
+    networks:
+      - boaky-internal
+    healthcheck:
+      test: ["CMD", "boaky", "health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  hermes:
+    image: nousresearch/hermes-agent:latest
+    restart: unless-stopped
+    # Hermes' container CMD is its interactive session; it exits without a
+    # pty ("Input is not a terminal"). Attach with:
+    #   docker compose exec -it hermes hermes
+    # or run one-shot queries:
+    #   docker compose run --rm hermes hermes -z "question"
+    tty: true
+    stdin_open: true
+    volumes:
+      # Declarative config (tracked) + secrets (ignored) as single-file binds;
+      # Hermes' runtime state (sessions, caches, state.db) lives in a volume
+      # so the repo stays clean.
+      - hermes-home:/opt/data
+      - ./hermes/config.yaml:/opt/data/config.yaml:ro
+      - ./hermes/.env:/opt/data/.env:ro
+    depends_on:
+      boaky:
+        condition: service_healthy
+    networks:
+      # outbound: reach OpenCode Go / opencode.ai (the internal net alone
+      # would block external provider connectivity)
+      - outbound
+      # boaky-internal: MCP tool calls to boaky, nothing published to host
+      - boaky-internal
+
+networks:
+  boaky-internal:
+    internal: true
+  outbound:
+    driver: bridge
+
+volumes:
+  hermes-home:

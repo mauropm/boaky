@@ -1,0 +1,28 @@
+# Hermes Agent — Boaky deployment profile.
+# Mounted into the container at /opt/data/config.yaml (HERMES_HOME=/opt/data).
+# The API key lives next to this file in .env (both gitignored).
+
+_config_version: 50
+
+# Conversation and generation are entirely Hermes' job. Boaky never calls
+# an LLM; Hermes generates answers strictly from Boaky's retrieved passages.
+model:
+  # Named provider below (OpenAI-compatible OpenCode Go endpoint).
+  provider: "opencode-go"
+  # DeepSeek V4 Pro: chosen for long-context retrieval-augmented generation.
+  default: "deepseek-v4-pro"
+
+providers:
+  opencode-go:
+    base_url: "https://opencode.ai/zen/go/v1"
+    api_key: ${OPENCODE_GO_API_KEY}
+
+# The bridge between the two products: Boaky's MCP tool surface.
+# Boaky exposes five read-only tools over streamable HTTP:
+# search_books, list_books, get_passages, get_book_metadata, check_evidence.
+mcp_servers:
+  boaky:
+    url: http://boaky:8000/mcp
+    # Boaky is always up before Hermes (depends_on: service_healthy),
+    # so eager connect is fine.
+    timeout: 60

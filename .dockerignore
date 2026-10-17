@@ -1,0 +1,17 @@
+.git
+.gitignore
+books/*
+!books/.gitkeep
+data/*
+books-rag
+bin/
+*.db
+*.db-wal
+*.db-shm
+*.log
+.hermes/
+docs/
+*_test.go
+docker-compose.yaml
+README.md
+ARCHITECTURE.md
