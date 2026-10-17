@@ -153,6 +153,23 @@ mcp_servers:
 Then verify from inside Hermes: ask it to `list_books`. Registered tools appear
 as `mcp_boaky_search_books` etc.
 
+### Example: "list the best quotes of the books you know from the mcp"
+
+Asking that of Hermes (run as `docker compose exec -it hermes hermes chat`)
+shows the MCP flow end to end:
+
+1. Hermes calls Boaky's `search_books`, collecting real passages across the
+   45-book collection (each with its `passage_id`).
+2. The quoted lines are **verbatim from the index** — Boaky only returns text
+   that exists in your books, so every line below is traceable to a passage.
+3. Hermes adds the editorial layer ("the best") — which is its pick, and it
+   says so explicitly rather than dressing it up as data.
+
+Each citation is `AUTHOR — Title (book_id:passage_seq)`, so any line can be
+re-checked with `get_passages`.
+
+![Hermes listing best quotes, each grounded in a real passage](screenshot.png)
+
 ## Hermes + OpenCode Go (DeepSeek V4.1 Flash) setup
 
 This deployment generates answers with **DeepSeek V4.1 Flash** through the
