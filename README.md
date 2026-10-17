@@ -249,6 +249,27 @@ docker compose logs -f boaky
   docker compose run --rm hermes hermes -z "What does Dracula say about memory?"
   ```
 
+### Where Hermes is usable (and how to reach it from elsewhere)
+
+In this configuration Hermes speaks to you **through the Docker console
+only**: the interactive session (`exec -it hermes hermes chat`) and one-shot
+queries (`run --rm hermes hermes -z …`) are the interface. The stack
+deliberately publishes no ports and keeps Boaky on an internal-only network,
+so nothing answers you from outside the container.
+
+If you need a chat platform instead of — or in addition to — the console,
+Hermes supports Telegram, Slack, WhatsApp and the rest natively; follow
+Hermes' own instructions (its `gateway` command manages messaging
+platforms, and `hermes slack` / `hermes whatsapp` provide setup helpers).
+Two notes for this stack:
+
+- Outbound connectivity is already in place (the `outbound` bridge network),
+  so a configured gateway can reach Telegram/Slack directly.
+- **No Boaky-side changes are needed**: Boaky stays exactly as configured —
+  whichever interface you add, generation still flows through the same MCP
+  tools and evidence gate. Platform credentials (bot tokens etc.) belong in
+  `hermes/.env`, same as the API key.
+
 - **Hermes MCP verification is independent of the LLM**: tools/list and tool
   calls over the internal network work with zero provider credentials (the
   evidence gate runs before any model call). If OpenCode Go returns
